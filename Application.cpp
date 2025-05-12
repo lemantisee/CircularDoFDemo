@@ -106,17 +106,17 @@ void Application::drawUI()
     ImGui::SetNextWindowSize(io.DisplaySize);
     if (ImGui::Begin("#root", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration )){
     // if (ImGui::Begin("Test")){
-        ImGui::Image((ImTextureID)(intptr_t)mImageTexture->getId(), ImVec2(512, 512));
+        ImGui::Image((ImTextureID)(intptr_t)mImageTexture->getId(), ImVec2(960, 960));
+        // ImGui::SameLine();
+        // ImGui::Image((ImTextureID)(intptr_t)mFilterTexture->getId(), ImVec2(512, 512));
         ImGui::SameLine();
-        ImGui::Image((ImTextureID)(intptr_t)mFilterTexture->getId(), ImVec2(512, 512));
-        ImGui::SameLine();
-        ImGui::Image((ImTextureID)(intptr_t)mTextureBlur->getId(), ImVec2(512, 512));
+        ImGui::Image((ImTextureID)(intptr_t)mTextureBlur->getId(), ImVec2(960, 960));
 
-        ImGui::Image((ImTextureID)(intptr_t)mTextureCompR->getId(), ImVec2(512, 512));
-        ImGui::SameLine();
-        ImGui::Image((ImTextureID)(intptr_t)mTextureCompG->getId(), ImVec2(512, 512));
-        ImGui::SameLine();
-        ImGui::Image((ImTextureID)(intptr_t)mTextureCompB->getId(), ImVec2(512, 512));
+        // ImGui::Image((ImTextureID)(intptr_t)mTextureCompR_RGB->getId(), ImVec2(512, 512));
+        // ImGui::SameLine();
+        // ImGui::Image((ImTextureID)(intptr_t)mTextureCompG->getId(), ImVec2(512, 512));
+        // ImGui::SameLine();
+        // ImGui::Image((ImTextureID)(intptr_t)mTextureCompB->getId(), ImVec2(512, 512));
     }
 
     ImGui::End();
@@ -132,7 +132,7 @@ void Application::drawUI()
 void Application::initTextures()
 {
     mImageTexture = std::make_unique<TextureFile>();
-    if (!mImageTexture->open("color1.png")) {
+    if (!mImageTexture->open("color2.png")) {
         LOG_ERROR("Unable to load texture file");
         return;
     }
@@ -145,6 +145,12 @@ void Application::initTextures()
 
     mTextureCompR = std::make_unique<Texture>();
     if (!mTextureCompR->init(mFilterTexture->getWidth(), mFilterTexture->getHeight(), 4)) {
+        LOG_ERROR("Unable to init texture comp R");
+        return;
+    }
+
+    mTextureCompR_RGB = std::make_unique<Texture>();
+    if (!mTextureCompR_RGB->init(mFilterTexture->getWidth(), mFilterTexture->getHeight(), 4)) {
         LOG_ERROR("Unable to init texture comp R");
         return;
     }
@@ -203,6 +209,12 @@ void Application::initTextures()
         return;
     }
 
+    mToRGBShader = std::make_unique<GpuProgram>();
+    if (!mToRGBShader->build("to_rgb.glsl")) {
+        LOG_ERROR("Unable to init merge shader");
+        return;
+    }
+
     mMesh = std::make_unique<QuadMesh>();
     if (!mMesh->init()) {
         LOG_ERROR("Unable to init mesh");
@@ -214,6 +226,7 @@ void Application::drawBlur()
 {
     renderFilter();
     renderComp(*mTextureCompR, *mCompRShader);
+    renderRgb(*mTextureCompR, *mTextureCompR_RGB);
     renderComp(*mTextureCompG, *mCompGShader);
     renderComp(*mTextureCompB, *mCompBShader);
     mergeImage();
@@ -251,6 +264,25 @@ void Application::renderComp(const Texture &targetTexture, GpuProgram &shader)
     glClear(GL_COLOR_BUFFER_BIT);
 
     shader.bind();
+    mFilterTexture->bind();
+    mMesh->draw();
+
+    mRT->endDraw();
+}
+
+void Application::renderRgb(Texture &sourceTexture, const Texture &targetTexture)
+{
+    if (!mRT->attachTexture(targetTexture)) {
+        LOG_ERROR("Unable to attach comp texture");
+        return;
+    }
+
+    mRT->beginDraw();
+
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    sourceTexture.bind();
     mFilterTexture->bind();
     mMesh->draw();
 

@@ -16,15 +16,14 @@ void main()
 
 @FRAG_START@
 
-#version 330 core
+#version 420 core
 out vec4 FragColor;
 
-in vec2 TexCoord;
-uniform sampler2D filterTexture;
-
-uniform sampler2D compRTexture;
-uniform sampler2D compGTexture;
-uniform sampler2D compBTexture;
+layout (location = 0) in vec2 TexCoord;
+layout(binding = 0) uniform sampler2D filterTexture;
+layout(binding = 1) uniform sampler2D compRTexture;
+layout(binding = 2) uniform sampler2D compGTexture;
+layout(binding = 3) uniform sampler2D compBTexture;
 
 #define KERNEL_COMPONENTS 2
 const int KERNEL_RADIUS = 8;

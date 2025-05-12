@@ -28,12 +28,14 @@ private:
 
     void renderFilter();
     void renderComp(const Texture &targetTexture, GpuProgram &shader);
+    void renderRgb(Texture &sourceTexture, const Texture &targetTexture);
     void mergeImage();
 
     GLFWwindow *mWindow = nullptr;
     std::unique_ptr<TextureFile> mImageTexture;
     std::unique_ptr<Texture> mFilterTexture;
     std::unique_ptr<Texture> mTextureCompR;
+    std::unique_ptr<Texture> mTextureCompR_RGB;
     std::unique_ptr<Texture> mTextureCompG;
     std::unique_ptr<Texture> mTextureCompB;
     std::unique_ptr<Texture> mTextureBlur;
@@ -43,5 +45,6 @@ private:
     std::unique_ptr<GpuProgram> mCompGShader;
     std::unique_ptr<GpuProgram> mCompBShader;
     std::unique_ptr<GpuProgram> mMergeShader;
+    std::unique_ptr<GpuProgram> mToRGBShader;
     std::unique_ptr<QuadMesh> mMesh;
 };

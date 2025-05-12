@@ -25,11 +25,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 configure_file(img/color.png color.png COPYONLY)
 configure_file(img/color1.png color1.png COPYONLY)
+configure_file(img/color2.png color2.png COPYONLY)
 configure_file(filter.glsl filter.glsl COPYONLY)
 configure_file(compR.glsl compR.glsl COPYONLY)
 configure_file(compG.glsl compG.glsl COPYONLY)
 configure_file(compB.glsl compB.glsl COPYONLY)
 configure_file(merge.glsl merge.glsl COPYONLY)
+configure_file(to_rgb.glsl to_rgb.glsl COPYONLY)
 
 include(GNUInstallDirs)
 install(TARGETS dof

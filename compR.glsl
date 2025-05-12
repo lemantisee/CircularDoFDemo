@@ -38,25 +38,19 @@ vec4 getFilters(int x, float textureWidth)
 
 void main()
 {
-    
     vec2 filterTextureSize = textureSize(filterTexture, 0).xy;
-    vec2 uv = gl_FragCoord.xy / filterTextureSize;
     vec2 stepVal = 1.0 / filterTextureSize;
     
     vec4 val = vec4(0, 0, 0, 0);
-    // float filterRadius = texture(filterTexture, uv).a;
-    float filterRadius = fetchImage(uv).a;
+    float filterRadius = texture(filterTexture, TexCoord).a;
 
     for (int i=-KERNEL_RADIUS; i <=KERNEL_RADIUS; ++i) {
-        vec2 coords = uv + stepVal * vec2(float(i), 0.0) * filterRadius;
-        float imageTexelR = fetchImage(coords).r;
-        // float imageTexelR = texture(filterTexture, coords).r;
+        vec2 coords = TexCoord + stepVal * vec2(i, 0.0) * filterRadius;
+        float imageTexelR = texture(filterTexture, coords).r;
         vec4 c0_c1 = getFilters(i + KERNEL_RADIUS, filterTextureSize.x);
         val.xy += imageTexelR * c0_c1.xy;
-        val.zw += imageTexelR * c0_c1.zw;
-        
+        val.zw += imageTexelR * c0_c1.zw;        
     }
-
     FragColor = val;
 }
 
