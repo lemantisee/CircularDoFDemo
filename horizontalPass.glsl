@@ -20,9 +20,10 @@ void main()
 out vec4 FragColor;
 
 in vec2 TexCoord;
+uniform int kernelRadius;
+uniform int component;
+uniform float filterRadius;
 uniform sampler2D filterTexture;
-
-const int KERNEL_RADIUS = 8;
 
 vec4 getFilters(int x, float textureWidth)
 {
@@ -36,17 +37,23 @@ void main()
     vec2 stepVal = 1.0 / filterTextureSize;
     
     vec4 val = vec4(0, 0, 0, 0);
-    float filterRadius = texture(filterTexture, TexCoord).a;
 
-    for (int i=-KERNEL_RADIUS; i <=KERNEL_RADIUS; ++i) {
-        vec2 coords = TexCoord + stepVal * vec2(float(i), 0.0) * filterRadius;
-        float imageTexelB = texture(filterTexture, coords).b;
-        vec4 c0_c1 = getFilters(i + KERNEL_RADIUS, filterTextureSize.x);
-        val.xy += imageTexelB * c0_c1.xy;
-        val.zw += imageTexelB * c0_c1.zw;
+    for (int i = -kernelRadius; i <= kernelRadius; ++i) {
+        vec2 coords = TexCoord + stepVal * vec2(i, 0.0) * filterRadius;
+        float imageTexel = 0;
         
-    }
+        if (component == 0) {
+            imageTexel = texture(filterTexture, coords).r;
+        } else if(component == 1) {
+            imageTexel = texture(filterTexture, coords).g;
+        } else {
+            imageTexel = texture(filterTexture, coords).b;
+        }
 
+        vec4 c0_c1 = getFilters(i + kernelRadius, filterTextureSize.x);
+        val.xy += imageTexel * c0_c1.xy;
+        val.zw += imageTexel * c0_c1.zw;        
+    }
     FragColor = val;
 }
 

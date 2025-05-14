@@ -20,9 +20,9 @@ void main()
 out vec4 FragColor;
 
 in vec2 TexCoord;
+uniform int kernelRadius;
 uniform sampler2D aTexture;
 
-const int KERNEL_RADIUS = 8;
 const int KERNEL_COUNT = 17;
 
 const vec4 Kernel0BracketsRealXY_ImZW = vec4(-0.038708,0.943062,-0.025574,0.660892);
@@ -81,14 +81,15 @@ vec4 fetchImage(vec2 coords, sampler2D tex)
 void main()
 {
     vec4 fragCoord = gl_FragCoord;
+    int kernelWidth = kernelRadius * 2 + 1;
 
-    if (int(fragCoord.x) < KERNEL_COUNT && int(fragCoord.y) == 0) {
+    if (int(fragCoord.x) < kernelWidth && int(fragCoord.y) == 0) {
         vec2 c0 = Kernel0_RealX_ImY_RealZ_ImW[int(fragCoord.x)].xy;
         vec2 c1 = Kernel1_RealX_ImY_RealZ_ImW[int(fragCoord.x)].xy;
         FragColor = vec4(c0.x, c0.y, c1.x, c1.y);        
     } else {
         vec4 color = fetchImage(TexCoord, aTexture);
-        FragColor = vec4(color.rgb, 0.5);
+        FragColor = vec4(color.rgb, 1.0);
     }
 }
 

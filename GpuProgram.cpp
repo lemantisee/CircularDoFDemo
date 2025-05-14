@@ -91,6 +91,18 @@ void GpuProgram::bind() { glUseProgram(mId); }
 
 void GpuProgram::unbind() { glUseProgram(0); }
 
+void GpuProgram::setInt(const std::string &name, int value)
+{
+    int loc = findLocation(name);
+    glUniform1i(loc, value);
+}
+
+void GpuProgram::setFloat(const std::string &name, float value)
+{
+    int loc = findLocation(name);
+    glUniform1f(loc, value);
+}
+
 std::string GpuProgram::readShaderFile(const std::string &shaderFilepath) const
 {
     std::ifstream shaderFile;
@@ -136,4 +148,16 @@ std::string GpuProgram::findShaderSource(const std::string &source, ShaderType t
     auto shaderStart = startPos + startTag.size();
 
     return std::string(source, shaderStart, endPos - shaderStart);
+}
+
+int GpuProgram::findLocation(const std::string &name)
+{
+    auto it = mUniformLocations.find(name);
+    if (it == mUniformLocations.end()) {
+        int loc = glGetUniformLocation(mId, name.c_str());
+        mUniformLocations[name] = loc;
+        return loc;
+    }
+
+    return it->second;
 }

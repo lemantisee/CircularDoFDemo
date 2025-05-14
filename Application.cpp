@@ -105,18 +105,38 @@ void Application::drawUI()
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(io.DisplaySize);
     if (ImGui::Begin("#root", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration )){
-    // if (ImGui::Begin("Test")){
-        ImGui::Image((ImTextureID)(intptr_t)mImageTexture->getId(), ImVec2(960, 960));
-        // ImGui::SameLine();
-        // ImGui::Image((ImTextureID)(intptr_t)mFilterTexture->getId(), ImVec2(512, 512));
-        ImGui::SameLine();
-        ImGui::Image((ImTextureID)(intptr_t)mTextureBlur->getId(), ImVec2(960, 960));
 
-        // ImGui::Image((ImTextureID)(intptr_t)mTextureCompR_RGB->getId(), ImVec2(512, 512));
-        // ImGui::SameLine();
-        // ImGui::Image((ImTextureID)(intptr_t)mTextureCompG->getId(), ImVec2(512, 512));
-        // ImGui::SameLine();
-        // ImGui::Image((ImTextureID)(intptr_t)mTextureCompB->getId(), ImVec2(512, 512));
+        if (ImGui::Begin("View", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Checkbox("Show R", &mShowChannelR);
+            ImGui::SameLine();
+            ImGui::Checkbox("Show G", &mShowChannelG);
+            ImGui::SameLine();
+            ImGui::Checkbox("Show B", &mShowChannelB);
+            ImGui::SliderInt("Image size", &mImageSize, 512, 1024);
+            ImGui::SliderFloat("Filter size", &mFilterSize, 0.1f, 3.0f);
+        }
+
+        ImGui::End();
+
+        ImVec2 imageSize = ImVec2(mImageSize, mImageSize);
+
+        ImGui::Image((ImTextureID)(intptr_t)mImageTexture->getId(), imageSize);
+        ImGui::SameLine();
+        ImGui::Image((ImTextureID)(intptr_t)mTextureBlur->getId(), imageSize);
+
+        if (mShowChannelR) {
+            ImGui::Image((ImTextureID)(intptr_t)mTextureCompR_RGB->getId(), imageSize);
+            ImGui::SameLine();
+        }
+
+        if (mShowChannelG) {
+            ImGui::Image((ImTextureID)(intptr_t)mTextureCompG_RGB->getId(), imageSize);
+            ImGui::SameLine();
+        }
+
+        if (mShowChannelB) {
+            ImGui::Image((ImTextureID)(intptr_t)mTextureCompB_RGB->getId(), imageSize);
+        }
     }
 
     ImGui::End();
@@ -161,9 +181,21 @@ void Application::initTextures()
         return;
     }
 
+    mTextureCompG_RGB = std::make_unique<Texture>();
+    if (!mTextureCompG_RGB->init(mFilterTexture->getWidth(), mFilterTexture->getHeight(), 4)) {
+        LOG_ERROR("Unable to init texture comp R");
+        return;
+    }
+
     mTextureCompB = std::make_unique<Texture>();
     if (!mTextureCompB->init(mFilterTexture->getWidth(), mFilterTexture->getHeight(), 4)) {
         LOG_ERROR("Unable to init texture comp B");
+        return;
+    }
+
+    mTextureCompB_RGB = std::make_unique<Texture>();
+    if (!mTextureCompB_RGB->init(mFilterTexture->getWidth(), mFilterTexture->getHeight(), 4)) {
+        LOG_ERROR("Unable to init texture comp R");
         return;
     }
 
@@ -174,10 +206,6 @@ void Application::initTextures()
     }
 
     mRT = std::make_unique<RenderTarget>();
-    // if (!mRT->init(mImageTexture->getWidth(), mImageTexture->getHeight())) {
-    //     LOG_ERROR("Unable to init render target");
-    //     return;
-    // }
 
     mFilterShader = std::make_unique<GpuProgram>();
     if (!mFilterShader->build("filter.glsl")) {
@@ -185,26 +213,14 @@ void Application::initTextures()
         return;
     }
 
-    mCompRShader = std::make_unique<GpuProgram>();
-    if (!mCompRShader->build("compR.glsl")) {
+    mHorizontalPassShader = std::make_unique<GpuProgram>();
+    if (!mHorizontalPassShader->build("horizontalPass.glsl")) {
         LOG_ERROR("Unable to init compR shader");
         return;
     }
 
-    mCompGShader = std::make_unique<GpuProgram>();
-    if (!mCompGShader->build("compG.glsl")) {
-        LOG_ERROR("Unable to init comp B shader");
-        return;
-    }
-
-    mCompBShader = std::make_unique<GpuProgram>();
-    if (!mCompBShader->build("compB.glsl")) {
-        LOG_ERROR("Unable to init comp G shader");
-        return;
-    }
-
-    mMergeShader = std::make_unique<GpuProgram>();
-    if (!mMergeShader->build("merge.glsl")) {
+    mVertPassShader = std::make_unique<GpuProgram>();
+    if (!mVertPassShader->build("verticalPass.glsl")) {
         LOG_ERROR("Unable to init merge shader");
         return;
     }
@@ -225,11 +241,27 @@ void Application::initTextures()
 void Application::drawBlur()
 {
     renderFilter();
-    renderComp(*mTextureCompR, *mCompRShader);
-    renderRgb(*mTextureCompR, *mTextureCompR_RGB);
-    renderComp(*mTextureCompG, *mCompGShader);
-    renderComp(*mTextureCompB, *mCompBShader);
+
+    mHorizontalPassShader->bind();
+    mHorizontalPassShader->setInt("kernelRadius", mKernelRadius);
+    mHorizontalPassShader->unbind();
+
+    renderComp(*mTextureCompR, RedChannel);
+    renderComp(*mTextureCompG, GreenChannel);
+    renderComp(*mTextureCompB, BlueChannel);
     mergeImage();
+
+    if (mShowChannelR) {
+        renderRgb(*mTextureCompR, *mTextureCompR_RGB);
+    }
+
+    if (mShowChannelG) {
+        renderRgb(*mTextureCompG, *mTextureCompG_RGB);
+    }
+
+    if (mShowChannelB) {
+        renderRgb(*mTextureCompB, *mTextureCompB_RGB);
+    }
 }
 
 void Application::renderFilter()
@@ -245,13 +277,15 @@ void Application::renderFilter()
     glClear(GL_COLOR_BUFFER_BIT);
 
     mFilterShader->bind();
+    mFilterShader->setInt("kernelRadius", mKernelRadius);
+    mFilterShader->setFloat("filterSize", mFilterSize);
     mImageTexture->bind();
     mMesh->draw();
 
     mRT->endDraw();
 }
 
-void Application::renderComp(const Texture &targetTexture, GpuProgram &shader)
+void Application::renderComp(const Texture &targetTexture, Component comp)
 {
     if (!mRT->attachTexture(targetTexture)) {
         LOG_ERROR("Unable to attach comp texture");
@@ -263,7 +297,9 @@ void Application::renderComp(const Texture &targetTexture, GpuProgram &shader)
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    shader.bind();
+    mHorizontalPassShader->bind();
+    mHorizontalPassShader->setInt("component", comp);
+    mHorizontalPassShader->setFloat("filterRadius", mFilterSize);
     mFilterTexture->bind();
     mMesh->draw();
 
@@ -301,7 +337,8 @@ void Application::mergeImage()
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    mMergeShader->bind();
+    mVertPassShader->bind();
+    mVertPassShader->setFloat("filterRadius", mFilterSize);
 
     mFilterTexture->bind(0);
     mTextureCompR->bind(1);

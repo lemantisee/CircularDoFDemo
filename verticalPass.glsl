@@ -20,6 +20,7 @@ void main()
 out vec4 FragColor;
 
 layout (location = 0) in vec2 TexCoord;
+uniform float filterRadius;
 layout(binding = 0) uniform sampler2D filterTexture;
 layout(binding = 1) uniform sampler2D compRTexture;
 layout(binding = 2) uniform sampler2D compGTexture;
@@ -52,8 +53,6 @@ void main()
     vec4 valR = vec4(0,0,0,0);
     vec4 valG = vec4(0,0,0,0);
     vec4 valB = vec4(0,0,0,0);
-
-    float filterRadius = texture(filterTexture, TexCoord).a;
 
     for (int i=-KERNEL_RADIUS; i <=KERNEL_RADIUS; ++i) {
         vec2 coords = TexCoord + stepVal * vec2(0.0, float(i)) * filterRadius;
