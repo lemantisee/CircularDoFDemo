@@ -206,7 +206,7 @@ def main():
     language = "glsl"
     FilterRadius = 8
     Components = 2
-    Transition = 0
+    Transition = 1.0
     generateFilter(language, FilterRadius, Components, Transition)
 
 if __name__ == "__main__":

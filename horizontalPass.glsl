@@ -16,14 +16,15 @@ void main()
 
 @FRAG_START@
 
-#version 330 core
+#version 420 core
 out vec4 FragColor;
 
 in vec2 TexCoord;
 uniform int kernelRadius;
 uniform int component;
 uniform float filterRadius;
-uniform sampler2D filterTexture;
+layout(binding = 0) uniform sampler2D filterTexture;
+layout(binding = 1) uniform sampler2D depthTexture;
 
 vec4 getFilters(int x, float textureWidth)
 {
@@ -35,11 +36,13 @@ void main()
 {
     vec2 filterTextureSize = textureSize(filterTexture, 0).xy;
     vec2 stepVal = 1.0 / filterTextureSize;
+
+    float filterRadius1 = 1.0 - texture(depthTexture, TexCoord).r;
     
     vec4 val = vec4(0, 0, 0, 0);
 
     for (int i = -kernelRadius; i <= kernelRadius; ++i) {
-        vec2 coords = TexCoord + stepVal * vec2(i, 0.0) * filterRadius;
+        vec2 coords = TexCoord + stepVal * vec2(i, 0.0) * filterRadius * filterRadius1;
         float imageTexel = 0;
         
         if (component == 0) {
@@ -52,7 +55,7 @@ void main()
 
         vec4 c0_c1 = getFilters(i + kernelRadius, filterTextureSize.x);
         val.xy += imageTexel * c0_c1.xy;
-        val.zw += imageTexel * c0_c1.zw;        
+        val.zw += imageTexel * c0_c1.zw;
     }
     FragColor = val;
 }

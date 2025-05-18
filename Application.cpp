@@ -106,12 +106,14 @@ void Application::drawUI()
     ImGui::SetNextWindowSize(io.DisplaySize);
     if (ImGui::Begin("#root", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration )){
 
+        static bool showDepth = false;
         if (ImGui::Begin("View", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             ImGui::Checkbox("Show R", &mShowChannelR);
             ImGui::SameLine();
             ImGui::Checkbox("Show G", &mShowChannelG);
             ImGui::SameLine();
             ImGui::Checkbox("Show B", &mShowChannelB);
+            ImGui::Checkbox("Show Depth", &showDepth);
             ImGui::SliderInt("Image size", &mImageSize, 512, 1024);
             ImGui::SliderFloat("Filter size", &mFilterSize, 0.1f, 3.0f);
         }
@@ -137,6 +139,10 @@ void Application::drawUI()
         if (mShowChannelB) {
             ImGui::Image((ImTextureID)(intptr_t)mTextureCompB_RGB->getId(), imageSize);
         }
+
+        if (showDepth) {
+            ImGui::Image((ImTextureID)(intptr_t)mDepthTexture->getId(), imageSize);
+        }
     }
 
     ImGui::End();
@@ -152,8 +158,14 @@ void Application::drawUI()
 void Application::initTextures()
 {
     mImageTexture = std::make_unique<TextureFile>();
-    if (!mImageTexture->open("color2.png")) {
-        LOG_ERROR("Unable to load texture file");
+    if (!mImageTexture->open("color3.png")) {
+        LOG_ERROR("Unable to load color texture file");
+        return;
+    }
+
+    mDepthTexture = std::make_unique<TextureFile>();
+    if (!mDepthTexture->open("depth.png")) {
+        LOG_ERROR("Unable to load depth texture file");
         return;
     }
 
@@ -300,7 +312,8 @@ void Application::renderComp(const Texture &targetTexture, Component comp)
     mHorizontalPassShader->bind();
     mHorizontalPassShader->setInt("component", comp);
     mHorizontalPassShader->setFloat("filterRadius", mFilterSize);
-    mFilterTexture->bind();
+    mFilterTexture->bind(0);
+    mDepthTexture->bind(1);
     mMesh->draw();
 
     mRT->endDraw();
@@ -344,6 +357,7 @@ void Application::mergeImage()
     mTextureCompR->bind(1);
     mTextureCompG->bind(2);
     mTextureCompB->bind(3);
+    mDepthTexture->bind(4);
 
     mMesh->draw();
 

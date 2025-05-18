@@ -39,6 +39,7 @@ private:
 
     GLFWwindow *mWindow = nullptr;
     std::unique_ptr<TextureFile> mImageTexture;
+    std::unique_ptr<TextureFile> mDepthTexture;
     std::unique_ptr<Texture> mFilterTexture;
     std::unique_ptr<Texture> mTextureCompR;
     std::unique_ptr<Texture> mTextureCompR_RGB;

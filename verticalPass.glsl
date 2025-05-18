@@ -25,6 +25,7 @@ layout(binding = 0) uniform sampler2D filterTexture;
 layout(binding = 1) uniform sampler2D compRTexture;
 layout(binding = 2) uniform sampler2D compGTexture;
 layout(binding = 3) uniform sampler2D compBTexture;
+layout(binding = 4) uniform sampler2D depthTexture;
 
 #define KERNEL_COMPONENTS 2
 const int KERNEL_RADIUS = 8;
@@ -54,8 +55,10 @@ void main()
     vec4 valG = vec4(0,0,0,0);
     vec4 valB = vec4(0,0,0,0);
 
+    float filterRadius1 = 1.0 - texture(depthTexture, TexCoord).r;
+
     for (int i=-KERNEL_RADIUS; i <=KERNEL_RADIUS; ++i) {
-        vec2 coords = TexCoord + stepVal * vec2(0.0, float(i)) * filterRadius;
+        vec2 coords = TexCoord + stepVal * vec2(0.0, float(i)) * filterRadius1 * filterRadius;
         vec4 imageTexelR = texture(compRTexture, coords);  
         vec4 imageTexelG = texture(compGTexture, coords);  
         vec4 imageTexelB = texture(compBTexture, coords);  

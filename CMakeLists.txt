@@ -26,6 +26,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 configure_file(img/color.png color.png COPYONLY)
 configure_file(img/color1.png color1.png COPYONLY)
 configure_file(img/color2.png color2.png COPYONLY)
+configure_file(img/color3.png color3.png COPYONLY)
+configure_file(img/depth.png depth.png COPYONLY)
 configure_file(filter.glsl filter.glsl COPYONLY)
 configure_file(horizontalPass.glsl horizontalPass.glsl COPYONLY)
 configure_file(verticalPass.glsl verticalPass.glsl COPYONLY)
