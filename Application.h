@@ -37,6 +37,11 @@ private:
     void renderRgb(Texture &sourceTexture, const Texture &targetTexture);
     void mergeImage();
 
+    void renderCoc();
+    void renderBlurH();
+    void renderBlurV();
+    void renderComposite();
+
     GLFWwindow *mWindow = nullptr;
     std::unique_ptr<TextureFile> mImageTexture;
     std::unique_ptr<TextureFile> mDepthTexture;
@@ -51,6 +56,11 @@ private:
     std::unique_ptr<Texture> mTextureCompB_RGB;
 
     std::unique_ptr<Texture> mTextureBlur;
+
+    std::unique_ptr<Texture> mTextureCoc;
+    std::unique_ptr<Texture> mTextureComposite;
+    std::unique_ptr<Texture> mTextureBlurH;
+
     std::unique_ptr<RenderTarget> mRT;
     std::unique_ptr<GpuProgram> mFilterShader;
     std::unique_ptr<GpuProgram> mHorizontalPassShader;
@@ -58,10 +68,19 @@ private:
     std::unique_ptr<GpuProgram> mToRGBShader;
     std::unique_ptr<QuadMesh> mMesh;
 
+    std::unique_ptr<GpuProgram> mCocShader;
+    std::unique_ptr<GpuProgram> mBlurShader;
+    std::unique_ptr<GpuProgram> mCompositeShader;
+
     bool mShowChannelR = false;
     bool mShowChannelG = false;
     bool mShowChannelB = false;
     int mImageSize = 512;
     int mKernelRadius = 8;
     float mFilterSize = 0.5;
+
+    float mFocalDepth = 5.0;
+    float mFarField = 7.3;
+    float mNearField = 1.3;
+    float mMaxBlur = 7.5;
 };

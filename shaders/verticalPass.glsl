@@ -19,7 +19,7 @@ void main()
 #version 420 core
 out vec4 FragColor;
 
-layout (location = 0) in vec2 TexCoord;
+in vec2 TexCoord;
 uniform float filterRadius;
 layout(binding = 0) uniform sampler2D filterTexture;
 layout(binding = 1) uniform sampler2D compRTexture;

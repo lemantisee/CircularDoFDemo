@@ -108,14 +108,19 @@ void Application::drawUI()
 
         static bool showDepth = false;
         if (ImGui::Begin("View", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Checkbox("Show R", &mShowChannelR);
-            ImGui::SameLine();
-            ImGui::Checkbox("Show G", &mShowChannelG);
-            ImGui::SameLine();
-            ImGui::Checkbox("Show B", &mShowChannelB);
+            // ImGui::Checkbox("Show R", &mShowChannelR);
+            // ImGui::SameLine();
+            // ImGui::Checkbox("Show G", &mShowChannelG);
+            // ImGui::SameLine();
+            // ImGui::Checkbox("Show B", &mShowChannelB);
             ImGui::Checkbox("Show Depth", &showDepth);
-            ImGui::SliderInt("Image size", &mImageSize, 512, 1024);
-            ImGui::SliderFloat("Filter size", &mFilterSize, 0.1f, 3.0f);
+            // ImGui::SliderInt("Image size", &mImageSize, 512, 1024);
+            // ImGui::SliderFloat("Filter size", &mFilterSize, 0.1f, 3.0f);
+
+            ImGui::SliderFloat("Near", &mNearField, 0.1f, 15.f);
+            ImGui::SliderFloat("Far", &mFarField, 0.1f, 15.f);
+            ImGui::SliderFloat("Focal depth", &mFocalDepth, 0.1f, 15.f);
+            ImGui::SliderFloat("Max blur", &mMaxBlur, 1.0f, 30.f);
         }
 
         ImGui::End();
@@ -124,21 +129,24 @@ void Application::drawUI()
 
         ImGui::Image((ImTextureID)(intptr_t)mImageTexture->getId(), imageSize);
         ImGui::SameLine();
+        ImGui::Image((ImTextureID)(intptr_t)mTextureCoc->getId(), imageSize);
         ImGui::Image((ImTextureID)(intptr_t)mTextureBlur->getId(), imageSize);
+        ImGui::SameLine();
+        ImGui::Image((ImTextureID)(intptr_t)mTextureComposite->getId(), imageSize);
 
-        if (mShowChannelR) {
-            ImGui::Image((ImTextureID)(intptr_t)mTextureCompR_RGB->getId(), imageSize);
-            ImGui::SameLine();
-        }
+        // if (mShowChannelR) {
+        //     ImGui::Image((ImTextureID)(intptr_t)mTextureCompR_RGB->getId(), imageSize);
+        //     ImGui::SameLine();
+        // }
 
-        if (mShowChannelG) {
-            ImGui::Image((ImTextureID)(intptr_t)mTextureCompG_RGB->getId(), imageSize);
-            ImGui::SameLine();
-        }
+        // if (mShowChannelG) {
+        //     ImGui::Image((ImTextureID)(intptr_t)mTextureCompG_RGB->getId(), imageSize);
+        //     ImGui::SameLine();
+        // }
 
-        if (mShowChannelB) {
-            ImGui::Image((ImTextureID)(intptr_t)mTextureCompB_RGB->getId(), imageSize);
-        }
+        // if (mShowChannelB) {
+        //     ImGui::Image((ImTextureID)(intptr_t)mTextureCompB_RGB->getId(), imageSize);
+        // }
 
         if (showDepth) {
             ImGui::Image((ImTextureID)(intptr_t)mDepthTexture->getId(), imageSize);
@@ -217,6 +225,24 @@ void Application::initTextures()
         return;
     }
 
+    mTextureBlurH = std::make_unique<Texture>();
+    if (!mTextureBlurH->init(mFilterTexture->getWidth(), mFilterTexture->getHeight(), 4)) {
+        LOG_ERROR("Unable to init texture blur");
+        return;
+    }
+
+    mTextureCoc = std::make_unique<Texture>();
+    if (!mTextureCoc->init(mFilterTexture->getWidth(), mFilterTexture->getHeight(), 4)) {
+        LOG_ERROR("Unable to init texture blur");
+        return;
+    }
+
+    mTextureComposite = std::make_unique<Texture>();
+    if (!mTextureComposite->init(mFilterTexture->getWidth(), mFilterTexture->getHeight(), 4)) {
+        LOG_ERROR("Unable to init texture blur");
+        return;
+    }
+
     mRT = std::make_unique<RenderTarget>();
 
     mFilterShader = std::make_unique<GpuProgram>();
@@ -243,6 +269,24 @@ void Application::initTextures()
         return;
     }
 
+    mCocShader = std::make_unique<GpuProgram>();
+    if (!mCocShader->build("coc.glsl")) {
+        LOG_ERROR("Unable to init merge shader");
+        return;
+    }
+
+    mBlurShader = std::make_unique<GpuProgram>();
+    if (!mBlurShader->build("blur.glsl")) {
+        LOG_ERROR("Unable to init merge shader");
+        return;
+    }
+
+    mCompositeShader = std::make_unique<GpuProgram>();
+    if (!mCompositeShader->build("composite.glsl")) {
+        LOG_ERROR("Unable to init merge shader");
+        return;
+    }
+
     mMesh = std::make_unique<QuadMesh>();
     if (!mMesh->init()) {
         LOG_ERROR("Unable to init mesh");
@@ -252,28 +296,32 @@ void Application::initTextures()
 
 void Application::drawBlur()
 {
-    renderFilter();
+    renderCoc();
+    renderBlurH();
+    renderBlurV();
+    renderComposite();
+    // renderFilter();
 
-    mHorizontalPassShader->bind();
-    mHorizontalPassShader->setInt("kernelRadius", mKernelRadius);
-    mHorizontalPassShader->unbind();
+    // mHorizontalPassShader->bind();
+    // mHorizontalPassShader->setInt("kernelRadius", mKernelRadius);
+    // mHorizontalPassShader->unbind();
 
-    renderComp(*mTextureCompR, RedChannel);
-    renderComp(*mTextureCompG, GreenChannel);
-    renderComp(*mTextureCompB, BlueChannel);
-    mergeImage();
+    // renderComp(*mTextureCompR, RedChannel);
+    // renderComp(*mTextureCompG, GreenChannel);
+    // renderComp(*mTextureCompB, BlueChannel);
+    // mergeImage();
 
-    if (mShowChannelR) {
-        renderRgb(*mTextureCompR, *mTextureCompR_RGB);
-    }
+    // if (mShowChannelR) {
+    //     renderRgb(*mTextureCompR, *mTextureCompR_RGB);
+    // }
 
-    if (mShowChannelG) {
-        renderRgb(*mTextureCompG, *mTextureCompG_RGB);
-    }
+    // if (mShowChannelG) {
+    //     renderRgb(*mTextureCompG, *mTextureCompG_RGB);
+    // }
 
-    if (mShowChannelB) {
-        renderRgb(*mTextureCompB, *mTextureCompB_RGB);
-    }
+    // if (mShowChannelB) {
+    //     renderRgb(*mTextureCompB, *mTextureCompB_RGB);
+    // }
 }
 
 void Application::renderFilter()
@@ -332,7 +380,6 @@ void Application::renderRgb(Texture &sourceTexture, const Texture &targetTexture
     glClear(GL_COLOR_BUFFER_BIT);
 
     sourceTexture.bind();
-    mFilterTexture->bind();
     mMesh->draw();
 
     mRT->endDraw();
@@ -358,6 +405,102 @@ void Application::mergeImage()
     mTextureCompG->bind(2);
     mTextureCompB->bind(3);
     mDepthTexture->bind(4);
+
+    mMesh->draw();
+
+    mRT->endDraw();
+}
+
+void Application::renderCoc()
+{
+    if (!mRT->attachTexture(*mTextureCoc)) {
+        LOG_ERROR("Unable to attach comp texture");
+        return;
+    }
+
+    mRT->beginDraw();
+
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    mCocShader->bind();
+
+    mDepthTexture->bind();
+    mCocShader->setFloat("focalDepth", mFocalDepth);
+    mCocShader->setFloat("near",mNearField);
+    mCocShader->setFloat("far", mFarField);
+    // mCocShader->setFloat("maxBlur", 10.0f);
+
+    mMesh->draw();
+
+    mRT->endDraw();
+}
+
+void Application::renderBlurH()
+{
+    if (!mRT->attachTexture(*mTextureBlurH)) {
+        LOG_ERROR("Unable to attach comp texture");
+        return;
+    }
+
+    mRT->beginDraw();
+
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    mBlurShader->bind();
+
+    mImageTexture->bind(0);
+    mTextureCoc->bind(1);
+    mBlurShader->setInt("horizontal", 1);
+    mBlurShader->setFloat("maxBlur",mMaxBlur);
+
+    mMesh->draw();
+
+    mRT->endDraw();
+}
+
+void Application::renderBlurV()
+{
+    if (!mRT->attachTexture(*mTextureBlur)) {
+        LOG_ERROR("Unable to attach comp texture");
+        return;
+    }
+
+    mRT->beginDraw();
+
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    mBlurShader->bind();
+
+    mTextureBlurH->bind(0);
+    mTextureCoc->bind(1);
+    mBlurShader->setInt("horizontal", 0);
+    mBlurShader->setFloat("maxBlur",mMaxBlur);
+
+    mMesh->draw();
+
+    mRT->endDraw();
+}
+
+void Application::renderComposite()
+{
+    if (!mRT->attachTexture(*mTextureComposite)) {
+        LOG_ERROR("Unable to attach comp texture");
+        return;
+    }
+
+    mRT->beginDraw();
+
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    mCompositeShader->bind();
+
+    mImageTexture->bind(0);
+    mTextureBlur->bind(1);
+    mTextureCoc->bind(2);
 
     mMesh->draw();
 
